@@ -7,10 +7,19 @@ class Server:
         self.host = host
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((self.host, self.port))
-        self.socket.listen(1)
         self.listFile={}
+        thread=Thread(target=self.start)
+        thread.start()
+        self.loop()
+        thread.join()
         
+    def loop(self):
+        while True:
+            cmd=input("")
+            cmd= cmd.lower()
+            if(cmd==""):
+                break
+
 
     def decodemsg(self, data):
         data= data.split("> ",1)
@@ -27,10 +36,12 @@ class Server:
             if not data:
                 continue
             header, msg=self.decodemsg(data)
-            if header == "REG" and REG == 0:
+            if (header == "REG" and REG == 0):
                 id = msg
                 REG = 1
                 print("A client has registered with id: ", id)
+                #send response
+                client_socket.send("<REG_ACK/>".encode())
                 
             elif(header=="PUSH"):
                 #push file
@@ -39,6 +50,7 @@ class Server:
                 else:
                     self.listFile[id]=[msg]
                 print(self.listFile)
+                client_socket.send("<PUSH_ACK/>".encode())
                 
             elif(header=="GET_F"):
                 list=""
@@ -47,6 +59,8 @@ class Server:
                         list+=key+";"
                         break
                 client_socket.send(list.encode())
+                #send response  
+                client_socket.send("<GET_F_ACK/>".encode())
             
             data=client_socket.recv(2048).decode()
                
@@ -55,6 +69,8 @@ class Server:
 
   
     def start(self):
+        self.socket.bind((self.host, self.port))
+        self.socket.listen(1)
         print(f"Server listening on {self.host}:{self.port}")
         while True:
             conn, addr = self.socket.accept()
@@ -66,4 +82,4 @@ class Server:
 PORT= 8080
 host = "192.168.0.105"
 server = Server(host, PORT)
-server.start()
+

@@ -10,6 +10,7 @@ class Client:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.choicelist={}
         self.currentRequest=""
+        self.filerepo = {}
         #bind on new thread
         thread= Thread(target=self.bind)
         thread.start()
@@ -29,30 +30,31 @@ class Client:
             cmd=input("input command: ")
             cmd= cmd.lower()
             cmd= cmd.split(" ")
-            if cmd[0]=="push":
-                print("pushing")
-                self.push(cmd[1])
+            if cmd[0]=="publish":
+                print("Pushing...")
+                self.filerepo[cmd[2]]=cmd[1]
+                self.push(cmd[2])
                 print("pushed")
                 continue
 
-            elif cmd[0]=="reg": #DO NOT USE, ALREADY REGISTERED WHEN CREATED, TAKE NO EFFECT
-                print("registering")
+            elif cmd[0]=="140203_REGTEST_140203_AAA": #DO NOT USE, ALREADY REGISTERED WHEN CREATED, TAKE NO EFFECT
+                print("Registering...")
                 self.reg()
-                print("registered")
                 continue
 
             elif cmd[0]=="get":
-                print("getting")
                 self.get(cmd[1])
-                print("got")
+                
  
             elif cmd[0]=="fetch":
                 self.fetch(self.choicelist[int(cmd[1])])
-                print("GOT FILE")
                 continue
 
             elif cmd=="exit":
                 break
+            else:
+                print("Invalid command")
+                continue
 
         
 
@@ -86,13 +88,16 @@ class Client:
         data=client_socket.recv(2048).decode()
         if data:
             header, data=self.decodemsg(data)
-            if header=="GET":
+            if header=="FETCH_REQ":
                 print("Sending file" + data)
+                #send response
+                client_socket.send("<FETCH_REQ_ACK/>".encode())
                 self.sendfile(client_socket, data)
                
 
 
     def sendfile(self, client_socket, filename):
+        filename=self.filerepo[filename]
         file = open(filename, 'rb')
         dat = file.read(2048)
         while (dat):
@@ -114,6 +119,12 @@ class Client:
         msg="<PUSH> " + filename + " </PUSH>"
         self.connectsocket.send(msg.encode())
         #get response from server
+        data=self.connectsocket.recv(2048).decode()
+        if(data=="<PUSH_ACK/>"):
+            print("Pushed successfully")
+            return 1
+        else:
+            return 0
 
     def reg(self):
         #register to server
@@ -123,6 +134,14 @@ class Client:
         self.connectsocket.send(msg.encode())
         print("Register with address: "+msg)
         #TODO: get respone from server
+        data=self.connectsocket.recv(2048).decode()
+        if(data=="<REG_ACK/>"):
+            print("Registered successfully")
+            return 1
+        else:
+            return 0
+
+
 
     def get(self, filename):
         #send request to server
@@ -133,9 +152,18 @@ class Client:
         #get list from server
         list=self.connectsocket.recv(4096).decode()
         self.choicelist=list.split(";")
-        print("List of user that have the file:")
-        print(self.choicelist)
-        self.currentRequest=filename
+
+
+        #TODO: get response from server
+        data=self.connectsocket.recv(2048).decode()
+        if(data=="<GET_F_ACK/>"):
+            print("List of user that have the file:")
+            print(self.choicelist)
+            self.currentRequest=filename
+            return 1
+        else:
+            print("Failed to get list of user" )
+            return 0
     
     def fetch(self, peer):
         peerHOST=peer.split(":")[0]
@@ -145,10 +173,16 @@ class Client:
         newsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         newsocket.connect((peerHOST, peerPORT))
         #send file name to peer
-        msg="<GET> " + self.currentRequest + " </GET>"
+        msg="<FETCH_REQ> " + self.currentRequest + " </FETCH_REQ>"
         newsocket.send(msg.encode())
 
         #TODO: get respone from peer
+        data=newsocket.recv(2048).decode()
+        if(data=="<FETCH_REQ_ACK/>"):
+            print("Fetching file...")
+        else:
+            print("Failed to fetch file" )
+            return 0
 
         #get file from peer
         FILENAME=self.currentRequest.split(".")[0]+"_copy."+self.currentRequest.split(".")[1]
@@ -160,6 +194,7 @@ class Client:
 
         newsocket.close()
         file.close()
+        print("File fetched successfully")
         return 0
 
 
@@ -172,6 +207,7 @@ class Client:
         print(header)
         msg=data[1].split(" <",1)[0]
         return header, msg
+
         
         
         
