@@ -1,4 +1,3 @@
-
 import socket
 from threading import Thread
 import os
@@ -108,6 +107,5 @@ class Server:
 
 #main
 PORT= 8080
-host = "172.20.10.5"
+host = socket.gethostbyname(socket.gethostname())
 server = Server(host, PORT)
-

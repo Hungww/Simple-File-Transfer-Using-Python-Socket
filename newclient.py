@@ -221,9 +221,14 @@ class Client:
     ####################################################################
 
 PORT = int(input("PORT to start: "))
-host = "172.20.10.5"
-serverhost = "172.20.10.5"
+#set localhost
+host = socket.gethostbyname(socket.gethostname())
+serverhost = "192.168.102.1"
+
 serverport = 8080
+#print client
+print("Client IP address is: " + host)
+
 client = Client(host, PORT, serverhost, serverport)
 
 
