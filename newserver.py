@@ -8,6 +8,7 @@ class Server:
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listFile={}
+        self.connection=[]
         thread=Thread(target=self.start)
         thread.start()
         self.loop()
@@ -19,7 +20,33 @@ class Server:
             cmd= cmd.lower()
             if(cmd==""):
                 break
+            else:
+                cmd= cmd.split(" ")
+                if(cmd[0]=="discover" and len(cmd)==2):
+                    print(self.listFile[cmd[1]])
+                elif(cmd[0]=="ping" and len(cmd)==2):
+                    if(cmd[1] not in self.connection):
+                        print("No connection from this IP")
+                    else:
+                        msg = "<PING> " + cmd[1] + " </PING>"
+                        temp = cmd[1].split(":")
+                        self.pinging(temp[0],int(temp[1]))
+                        #send request
+                        self.connectsocket.send(msg.encode())
+                        print("Pinging: ",cmd[1])
 
+                        #get response
+                        data = self.connectsocket.recv(2048).decode()
+                        if(data == "<PING_ACK/>"):
+                            print("User is good")
+                        else:
+                            print("User is not good")
+                else:
+                    print("Invalid command")
+
+    def pinging(self, clientAdd, clientPort):
+        self.connectsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connectsocket.connect((clientAdd, clientPort))
 
     def decodemsg(self, data):
         data= data.split("> ",1)
@@ -39,6 +66,7 @@ class Server:
             if (header == "REG" and REG == 0):
                 id = msg
                 REG = 1
+                self.connection.append(id)
                 print("A client has registered with id: ", id)
                 #send response
                 client_socket.send("<REG_ACK/>".encode())
@@ -80,6 +108,6 @@ class Server:
 
 #main
 PORT= 8080
-host = "192.168.0.105"
+host = "172.20.10.5"
 server = Server(host, PORT)
 

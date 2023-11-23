@@ -30,7 +30,7 @@ class Client:
             cmd=input("input command: ")
             cmd= cmd.lower()
             cmd= cmd.split(" ")
-            if cmd[0]=="publish":
+            if cmd[0]=="publish" and len(cmd)==3:
                 print("Pushing...")
                 self.filerepo[cmd[2]]=cmd[1]
                 self.push(cmd[2])
@@ -42,11 +42,11 @@ class Client:
                 self.reg()
                 continue
 
-            elif cmd[0]=="get":
+            elif cmd[0]=="get" and len(cmd) == 2:
                 self.get(cmd[1])
                 
  
-            elif cmd[0]=="fetch":
+            elif cmd[0]=="fetch" and len(cmd) == 2:
                 self.fetch(self.choicelist[int(cmd[1])])
                 continue
 
@@ -93,6 +93,11 @@ class Client:
                 #send response
                 client_socket.send("<FETCH_REQ_ACK/>".encode())
                 self.sendfile(client_socket, data)
+            
+            if header=="PING":
+                print("Ping request from server")
+                msg = "<PING_ACK> " + data + " </PING_ACK>"
+                self.connectsocket.send(msg.encode())
                
 
 
@@ -216,8 +221,8 @@ class Client:
     ####################################################################
 
 PORT = int(input("PORT to start: "))
-host = "192.168.0.105"
-serverhost = "192.168.0.105"
+host = "172.20.10.5"
+serverhost = "172.20.10.5"
 serverport = 8080
 client = Client(host, PORT, serverhost, serverport)
 
